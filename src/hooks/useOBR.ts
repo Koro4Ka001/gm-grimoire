@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import OBR from '@owlbear-rodeo/sdk';
 import { SelectedToken, CombinedUnit } from '@/types';
 import { parseGrimoireData } from '@/utils/grimoireParser';
@@ -8,7 +8,9 @@ export function useOBR() {
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTokens, setSelectedTokens] = useState<SelectedToken[]>([]);
-  const getDefense = useDefenseStore(s => s.getDefense);
+  
+  // Подписываемся на весь объект units чтобы получать обновления
+  const defenseUnits = useDefenseStore(s => s.units);
 
   // Загрузка данных выделенных токенов
   const loadSelectedTokens = useCallback(async () => {
@@ -100,32 +102,34 @@ export function useOBR() {
   }, [isReady, loadSelectedTokens]);
 
   // Комбинируем данные Grimoire с локальными защитами
-  const selectedUnits: CombinedUnit[] = selectedTokens.map(token => {
-    const defense = getDefense(token.tokenId);
-    const grimoire = token.grimoire;
-    
-    return {
-      tokenId: token.tokenId,
-      name: grimoire?.name || token.tokenName,
-      image: token.image,
+  const selectedUnits: CombinedUnit[] = useMemo(() => {
+    return selectedTokens.map(token => {
+      const defense = defenseUnits[token.tokenId] || null;
+      const grimoire = token.grimoire;
       
-      // Данные из Grimoire
-      hp: grimoire?.hp ?? 0,
-      maxHp: grimoire?.maxHp ?? 0,
-      tempHp: grimoire?.tempHp ?? 0,
-      mana: grimoire?.mana ?? null,
-      maxMana: grimoire?.maxMana ?? null,
-      
-      // Защита
-      flatArmor: defense?.flatArmor ?? grimoire?.armor ?? 0,
-      armorByType: defense?.armorByType ?? {},
-      multipliers: defense?.multipliers ?? {},
-      
-      // Флаги
-      hasGrimoireData: grimoire !== null,
-      hasDefenseData: defense !== null,
-    };
-  });
+      return {
+        tokenId: token.tokenId,
+        name: grimoire?.name || token.tokenName,
+        image: token.image,
+        
+        // Данные из Grimoire
+        hp: grimoire?.hp ?? 0,
+        maxHp: grimoire?.maxHp ?? 0,
+        tempHp: grimoire?.tempHp ?? 0,
+        mana: grimoire?.mana ?? null,
+        maxMana: grimoire?.maxMana ?? null,
+        
+        // Защита из локального store
+        flatArmor: defense?.flatArmor ?? grimoire?.armor ?? 0,
+        armorByType: defense?.armorByType ?? {},
+        multipliers: defense?.multipliers ?? {},
+        
+        // Флаги
+        hasGrimoireData: grimoire !== null,
+        hasDefenseData: defense !== null,
+      };
+    });
+  }, [selectedTokens, defenseUnits]);
 
   return {
     isReady,
