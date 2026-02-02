@@ -176,6 +176,8 @@ interface ArmorEditorProps {
 }
 
 function ArmorEditor({ unit, onClose }: ArmorEditorProps) {
+  // Получаем актуальные данные напрямую из store
+  const defenseData = useDefenseStore(s => s.units[unit.tokenId]);
   const {
     setFlatArmor,
     setArmorByType,
@@ -184,6 +186,11 @@ function ArmorEditor({ unit, onClose }: ArmorEditorProps) {
     removeMultiplier,
     clearUnit,
   } = useDefenseStore();
+  
+  // Используем данные из store или дефолтные значения
+  const flatArmor = defenseData?.flatArmor ?? unit.flatArmor ?? 0;
+  const armorByType = defenseData?.armorByType ?? unit.armorByType ?? {};
+  const multipliers = defenseData?.multipliers ?? unit.multipliers ?? {};
   
   const [newArmorType, setNewArmorType] = useState<DamageType | ''>('');
   const [newArmorValue, setNewArmorValue] = useState(5);
@@ -221,7 +228,7 @@ function ArmorEditor({ unit, onClose }: ArmorEditorProps) {
             </label>
             <input
               type="number"
-              value={unit.flatArmor}
+              value={flatArmor}
               onChange={(e) => setFlatArmor(unit.tokenId, parseInt(e.target.value) || 0)}
               min={0}
               className="w-full bg-[#0a0a10] border border-[#2a2a3a] rounded-lg px-4 py-3 font-mono text-xl text-center focus:outline-none focus:border-purple-500"
@@ -245,14 +252,14 @@ function ArmorEditor({ unit, onClose }: ArmorEditorProps) {
                   <option value="">Выберите тип...</option>
                   <optgroup label="Физический">
                     {Object.values(DAMAGE_TYPE_MAP)
-                      .filter(t => t.category === 'physical' && !(t.key in unit.armorByType))
+                      .filter(t => t.category === 'physical' && !(t.key in armorByType))
                       .map(t => (
                         <option key={t.key} value={t.key}>{t.icon} {t.nameRu}</option>
                       ))}
                   </optgroup>
                   <optgroup label="Магический">
                     {Object.values(DAMAGE_TYPE_MAP)
-                      .filter(t => t.category === 'magical' && !(t.key in unit.armorByType))
+                      .filter(t => t.category === 'magical' && !(t.key in armorByType))
                       .map(t => (
                         <option key={t.key} value={t.key}>{t.icon} {t.nameRu}</option>
                       ))}
@@ -276,10 +283,10 @@ function ArmorEditor({ unit, onClose }: ArmorEditorProps) {
               </div>
               
               {/* Existing armor by type */}
-              {Object.entries(unit.armorByType).length > 0 && (
+              {Object.entries(armorByType).length > 0 && (
                 <div className="space-y-1 mt-2">
                   <span className="text-xs text-gray-500">Добавлено:</span>
-                  {Object.entries(unit.armorByType).map(([type, value]) => {
+                  {Object.entries(armorByType).map(([type, value]) => {
                     const typeInfo = DAMAGE_TYPE_MAP[type as DamageType];
                     return (
                       <div key={type} className="flex items-center gap-2 bg-[#0a0a10] rounded px-3 py-2">
@@ -317,14 +324,14 @@ function ArmorEditor({ unit, onClose }: ArmorEditorProps) {
                   <option value="">Выберите тип урона...</option>
                   <optgroup label="Физический">
                     {Object.values(DAMAGE_TYPE_MAP)
-                      .filter(t => t.category === 'physical' && t.key !== 'pure' && !(t.key in unit.multipliers))
+                      .filter(t => t.category === 'physical' && t.key !== 'pure' && !(t.key in multipliers))
                       .map(t => (
                         <option key={t.key} value={t.key}>{t.icon} {t.nameRu}</option>
                       ))}
                   </optgroup>
                   <optgroup label="Магический">
                     {Object.values(DAMAGE_TYPE_MAP)
-                      .filter(t => t.category === 'magical' && !(t.key in unit.multipliers))
+                      .filter(t => t.category === 'magical' && !(t.key in multipliers))
                       .map(t => (
                         <option key={t.key} value={t.key}>{t.icon} {t.nameRu}</option>
                       ))}
@@ -349,10 +356,10 @@ function ArmorEditor({ unit, onClose }: ArmorEditorProps) {
               </div>
               
               {/* Existing multipliers */}
-              {Object.entries(unit.multipliers).length > 0 && (
+              {Object.entries(multipliers).length > 0 && (
                 <div className="space-y-1 mt-2">
                   <span className="text-xs text-gray-500">Добавлено:</span>
-                  {Object.entries(unit.multipliers)
+                  {Object.entries(multipliers)
                     .filter(([_, v]) => v !== 1)
                     .map(([type, value]) => {
                       const typeInfo = DAMAGE_TYPE_MAP[type as DamageType];
